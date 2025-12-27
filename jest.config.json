@@ -1,0 +1,14 @@
+{
+  "testEnvironment": "node",
+  "collectCoverage": true,
+  "coverageDirectory": "coverage",
+  "coverageReporters": ["text", "lcov", "html"],
+  "testMatch": [
+    "**/tests/**/*.test.js",
+    "**/tests/**/*.spec.js"
+  ],
+  "testTimeout": 30000,
+  "verbose": true,
+  "setupFiles": ["<rootDir>/tests/setupEnv.js"],
+  "maxWorkers": 1
+}
