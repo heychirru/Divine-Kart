@@ -1,66 +1,85 @@
+# =========================
 # Dependencies
+
 node_modules/
+package-lock.json
+yarn.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
+lerna-debug.log*
 
+# =========================
 # Environment variables
+# =========================
 .env
+.env.*.local
 
-# IDE and Editor
+# =========================
+# Build output & coverage
+# =========================
+dist/
+build/
+coverage/
+.nyc_output/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Runtime data
+# =========================
+pids/
+*.pid
+*.pid.lock
+*.seed
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+*.tmp
+
+# =========================
+# IDE & Editor files
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
-Thumbs.db
 *.sublime-workspace
 *.sublime-project
 
-# OS files
+# =========================
+# OS-specific files
+# =========================
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
+Thumbs.db
 ehthumbs.db
 
-# Build and coverage
-coverage
-dist/
-build/
-
-# Logs
-logs/
-*.log
-lerna-debug.log*
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
+# =========================
 # Docker
+# =========================
 .dockerignore
-push-docker.ps1
-push-docker.sh
 push-docker
+push-docker.sh
+push-docker.ps1
 
+# =========================
 # Testing
-.nyc_output/
+# =========================
 .jest_cache/
 
-# OS-specific
+# =========================
+# VS Code workspace settings
+# =========================
 .vscode/extensions.json
-
-
-
