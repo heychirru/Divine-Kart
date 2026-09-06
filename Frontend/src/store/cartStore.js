@@ -4,14 +4,12 @@ import { persist } from 'zustand/middleware';
 const useCartStore = create(
     persist(
         (set, get) => ({
-            // State
             items: [],
             total: 0,
             subtotal: 0,
             deliveryFee: 0,
             discount: 0,
 
-            // Actions
             setCart: (cartData) => {
                 set({
                     items: cartData.items || [],
@@ -79,7 +77,7 @@ const useCartStore = create(
                     0
                 );
                 const deliveryFee = subtotal > 0 ? (subtotal >= 500 ? 0 : 49) : 0;
-                const discount = 0; // Can be calculated based on coupons
+                const discount = 0;
                 const total = subtotal + deliveryFee - discount;
 
                 set({ subtotal, deliveryFee, discount, total });

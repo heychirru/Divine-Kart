@@ -51,8 +51,8 @@ export async function sendLoginOtp(req, res) {
 
     try {
         const user = await User.findOne(query);
-        const otp = String(generatedOtp()); // 6-digit OTP, consistent with forgotPasswordController
-        const ttl = 10 * 60; // 10 minutes
+        const otp = String(generatedOtp());
+        const ttl = 10 * 60;
 
         if (user) {
             // Existing User: Update record
@@ -66,20 +66,24 @@ export async function sendLoginOtp(req, res) {
             pendingRegistrations.set(key, { otp, expiry: new Date(Date.now() + ttl * 1000) });
         }
 
-        // Send OTP via email if identifier is email or user has email
+        // LOG FOR TESTING — always log OTP before attempting email
         const targetEmail = email || (user?.email);
-        if (targetEmail) {
-            await sendEmail({
-                sendTo: targetEmail,
-                subject: "Your DivineKart OTP",
-                html: loginOtpTemplate({ name: user?.name || "Customer", otp }),
-            });
-        }
-
-        // LOG FOR TESTING (Temporary until SMS implementation)
         console.log('------------------------------------');
         console.log(`[AUTH] OTP for ${identifier}: ${otp}`);
         console.log('------------------------------------');
+
+        // Send OTP via email if identifier is email or user has email
+        if (targetEmail) {
+            try {
+                await sendEmail({
+                    sendTo: targetEmail,
+                    subject: "Your DivineKart OTP",
+                    html: loginOtpTemplate({ name: user?.name || "Customer", otp }),
+                });
+            } catch (emailErr) {
+                console.warn("[sendLoginOtp] Email delivery failed (OTP still valid):", emailErr.message);
+            }
+        }
 
         return res.json({
             success: true,
@@ -298,9 +302,6 @@ export async function verifyForgotPasswordOtp(request, response) {
                 success: false
             })
         }
-
-        //if otp is not expired
-        //otp === user.forgotPasswordOtp
 
         await User.findByIdAndUpdate(user?._id, {
             forgotPasswordOtp: "",

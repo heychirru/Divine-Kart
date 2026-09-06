@@ -4,14 +4,12 @@ import { persist } from 'zustand/middleware';
 const useAuthStore = create(
     persist(
         (set, get) => ({
-            // State
             user: null,
             token: null,
             refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
 
-            // Actions
             setUser: (user) => set({ user, isAuthenticated: !!user }),
 
             setTokens: (token, refreshToken) => {
@@ -48,7 +46,6 @@ const useAuthStore = create(
 
             setLoading: (isLoading) => set({ isLoading }),
 
-            // Initialize from localStorage
             initialize: () => {
                 const token = localStorage.getItem('token');
                 const refreshToken = localStorage.getItem('refreshToken');

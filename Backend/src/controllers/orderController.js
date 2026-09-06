@@ -61,7 +61,6 @@ const getRazorpayInstance = () => {
     return razorpay;
 };
 
-//CREATE ORDER
 export const createOrder = async (req, res, next) => {
     try {
         // Validate user is authenticated
@@ -91,10 +90,8 @@ export const createOrder = async (req, res, next) => {
             });
         }
 
-        // Items come in as { product, quantity, price }
         const productIds = items.map(item => item.product);
 
-        // Deduplicate
         const uniqueProductIds = [...new Set(productIds)];
         if (productIds.length !== uniqueProductIds.length) {
             return res.status(400).json({
@@ -103,7 +100,6 @@ export const createOrder = async (req, res, next) => {
             });
         }
 
-        // Validate and fetch products with server-side pricing
         const products = await Product.find({ _id: { $in: productIds } });
 
         if (products.length !== productIds.length) {
@@ -113,7 +109,7 @@ export const createOrder = async (req, res, next) => {
             });
         }
 
-        // Build order items using server-side prices (ignore client-sent price)
+        // Build order items using server-side prices
         const orderItems = items.map(clientItem => {
             const serverProduct = products.find(p => p._id.toString() === clientItem.product.toString());
             if (!serverProduct) {
@@ -141,7 +137,6 @@ export const createOrder = async (req, res, next) => {
             notes:   notes || ''
         };
 
-        // Structured shipping address (saved separately for vendor order drawer)
         const shippingAddressDoc = {
             name:        req.user.name || req.user.username || 'Customer',
             phone:       addrObj.phone || req.user.phone || '',
@@ -215,9 +210,6 @@ export const createOrder = async (req, res, next) => {
 
                 await newOrder.save();
 
-                // NOTE: Stock decrement and user history update happen in verifyRazorpayPayment
-                // after payment is confirmed — not here, to avoid inventory loss on abandoned payments.
-
                 return res.status(201).json({
                     success: true,
                     order: newOrder,
@@ -242,7 +234,6 @@ export const createOrder = async (req, res, next) => {
             }
         }
 
-        // COD ORDER — save without transaction (replica set not required)
         newOrder = new Order({
             orderId,
             user: req.user._id,
@@ -261,13 +252,11 @@ export const createOrder = async (req, res, next) => {
 
         await newOrder.save();
 
-        // Update user order history
         await User.findByIdAndUpdate(
             req.user._id,
             { $push: { orderHistory: newOrder._id } }
         );
 
-        // Decrement stock — only if sufficient stock exists (prevents overselling)
         const bulkResult = await Product.bulkWrite(
             orderItems.map(item => ({
                 updateOne: {
@@ -278,7 +267,6 @@ export const createOrder = async (req, res, next) => {
         );
 
         if (bulkResult.modifiedCount < orderItems.length) {
-            // Rollback: mark order as failed when stock is insufficient
             newOrder.paymentStatus = 'Unpaid';
             newOrder.status = 'cancelled';
             await newOrder.save();
@@ -289,7 +277,6 @@ export const createOrder = async (req, res, next) => {
             });
         }
 
-        // Notify the assigned store asynchronously (don't block response)
         notifyStoreOfNewOrder(newOrder, assignedStore).catch(err =>
             console.error('[createOrder] Store notification failed:', err.message)
         );
@@ -306,7 +293,6 @@ export const createOrder = async (req, res, next) => {
     }
 }
 
-// VERIFY RAZORPAY PAYMENT
 export const verifyRazorpayPayment = async (req, res, next) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -330,8 +316,8 @@ export const verifyRazorpayPayment = async (req, res, next) => {
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 
-        const expectedBuf = Buffer.from(generatedSignature, 'hex');
-        const receivedBuf = Buffer.from(razorpay_signature, 'hex');
+        const expectedBuf = Buffer.from(generatedSignature, 'utf8');
+        const receivedBuf = Buffer.from(razorpay_signature, 'utf8');
         const isValid = expectedBuf.length === receivedBuf.length &&
             crypto.timingSafeEqual(expectedBuf, receivedBuf);
 
@@ -342,7 +328,6 @@ export const verifyRazorpayPayment = async (req, res, next) => {
             });
         }
 
-        // Check if order exists and is not already paid (race condition prevention)
         const existingOrder = await Order.findOne({ razorpayOrderId: razorpay_order_id });
         if (!existingOrder) {
             return res.status(404).json({
@@ -362,7 +347,7 @@ export const verifyRazorpayPayment = async (req, res, next) => {
         const order = await Order.findOneAndUpdate(
             {
                 razorpayOrderId: razorpay_order_id,
-                paymentStatus: { $ne: 'Paid' } // Only update if not already paid
+                paymentStatus: { $ne: 'Paid' } 
             },
             {
                 paymentStatus: 'Paid',
@@ -379,12 +364,10 @@ export const verifyRazorpayPayment = async (req, res, next) => {
             });
         }
 
-        // Now that payment is confirmed, decrement stock and update user order history
         await User.findByIdAndUpdate(order.user, {
             $push: { orderHistory: order._id }
         });
 
-        // Decrement stock — only if sufficient stock exists (prevents overselling)
         const bulkResult = await Product.bulkWrite(
             order.items.map(item => ({
                 updateOne: {
@@ -395,11 +378,9 @@ export const verifyRazorpayPayment = async (req, res, next) => {
         );
 
         if (bulkResult.modifiedCount < order.items.length) {
-            // Payment succeeded but stock is low — log warning, don't fail the response
             console.warn(`[verifyRazorpayPayment] Stock insufficient for some items in order ${order.orderId}. Manual review required.`);
         }
 
-        // Notify the assigned store asynchronously
         if (order.store) {
             const fullStore = await Store.findById(order.store).populate('owner', 'email name').lean();
             notifyStoreOfNewOrder(order, fullStore).catch(err =>
@@ -414,7 +395,6 @@ export const verifyRazorpayPayment = async (req, res, next) => {
     }
 }
 
-//GET ALL ORDERS
 export const getOrders = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -462,10 +442,8 @@ export const getOrders = async (req, res, next) => {
     }
 }
 
-//GET ORDERS BY ID
 export const getOrderById = async (req, res, next) => {
     try {
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({
                 success: false,
@@ -482,7 +460,6 @@ export const getOrderById = async (req, res, next) => {
             });
         }
 
-        // If user is not admin, only allow access to their own orders
         if (req.user && req.user.role !== 'admin') {
             if (!order.user) {
                 return res.status(403).json({
@@ -505,10 +482,9 @@ export const getOrderById = async (req, res, next) => {
     }
 }
 
-//UPDATE ORDER BY ID — admin only (enforced by isAdmin middleware on route)
 export const updateOrder = async (req, res, next) => {
     try {
-        // Validate ObjectId format
+
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({
                 success: false,
@@ -534,7 +510,6 @@ export const updateOrder = async (req, res, next) => {
             }
         });
 
-        // If deliveryFee is updated, recalculate total
         if (updateData.deliveryFee !== undefined) {
             if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
                 return res.status(400).json({
@@ -571,10 +546,9 @@ export const updateOrder = async (req, res, next) => {
     }
 }
 
-//DELETE ORDER BY ID
 export const deleteOrder = async (req, res, next) => {
     try {
-        // Validate ObjectId format
+
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({
                 success: false,
@@ -610,7 +584,6 @@ export const deleteOrder = async (req, res, next) => {
     }
 }
 
-// RAZORPAY WEBHOOK HANDLER
 export const handleRazorpayWebhook = async (req, res, next) => {
     try {
         const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -628,8 +601,6 @@ export const handleRazorpayWebhook = async (req, res, next) => {
                 message: 'Missing webhook signature header'
             });
         }
-
-        // Validate req.body exists and is a Buffer or string
         if (!req.body) {
             return res.status(400).json({
                 success: false,
@@ -652,7 +623,6 @@ export const handleRazorpayWebhook = async (req, res, next) => {
             .update(bodyString)
             .digest('hex');
 
-        // Use timing-safe comparison to prevent timing attacks
         const expectedBuf = Buffer.from(expected, 'utf8');
         const signatureBuf = Buffer.from(signature, 'utf8');
         if (expectedBuf.length !== signatureBuf.length ||
@@ -663,7 +633,6 @@ export const handleRazorpayWebhook = async (req, res, next) => {
             });
         }
 
-        // Parse raw body JSON
         let payload;
         try {
             payload = JSON.parse(bodyString);
@@ -687,7 +656,6 @@ export const handleRazorpayWebhook = async (req, res, next) => {
             let orderId = null;
             let paymentId = null;
 
-            // Safely extract order ID and payment ID
             if (payload.payload) {
                 if (payload.payload.payment && payload.payload.payment.entity) {
                     orderId = payload.payload.payment.entity.order_id;
@@ -701,7 +669,7 @@ export const handleRazorpayWebhook = async (req, res, next) => {
                 const updateResult = await Order.findOneAndUpdate(
                     {
                         razorpayOrderId: orderId,
-                        paymentStatus: { $ne: 'Paid' } // Prevent duplicate updates
+                        paymentStatus: { $ne: 'Paid' }
                     },
                     {
                         paymentStatus: 'Paid',

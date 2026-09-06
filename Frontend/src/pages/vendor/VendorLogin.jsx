@@ -1,11 +1,11 @@
+import { getMyStore, sendVendorOtp, verifyVendorOtp } from '@/services/storeService';
 import useVendorStore from '@/store/vendorStore';
 import { VENDOR_ROUTES } from '@/utils/constants';
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Mail, ShieldCheck, Store } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import { sendVendorOtp, verifyVendorOtp, getMyStore } from '@/services/storeService';
-import { useQueryClient } from '@tanstack/react-query';
 
 const VendorLogin = () => {
   const navigate = useNavigate();
@@ -16,7 +16,6 @@ const VendorLogin = () => {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const timerRef = useRef(null);
@@ -43,13 +42,7 @@ const VendorLogin = () => {
     setLoading(true);
     try {
       const res = await sendVendorOtp(email.trim().toLowerCase());
-      if (res?.otp) {
-        setDevOtp(res.otp);
-        setOtp(res.otp);
-        toast('📋 Dev mode: OTP auto-filled below', { icon: '🔧' });
-      } else {
-        toast.success('OTP sent! Check your email.');
-      }
+      toast.success('OTP sent! Check your email.');
       setStep(2);
       startResendTimer();
     } catch (err) {
@@ -88,8 +81,7 @@ const VendorLogin = () => {
     setLoading(true);
     try {
       const res = await sendVendorOtp(email.trim().toLowerCase());
-      if (res?.otp) { setDevOtp(res.otp); setOtp(res.otp); toast('📋 Dev mode: OTP auto-filled', { icon: '🔧' }); }
-      else toast.success('OTP resent!');
+      toast.success('OTP resent!');
       startResendTimer();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to resend OTP');
@@ -132,7 +124,7 @@ const VendorLogin = () => {
             </>
           ) : (
             <>
-              <button onClick={() => { setStep(1); setOtp(''); setDevOtp(null); }}
+              <button onClick={() => { setStep(1); setOtp(''); }}
                 className="text-xs text-gray-500 hover:text-gray-300 mb-5 flex items-center gap-1 transition">
                 ← Change email
               </button>
@@ -140,15 +132,7 @@ const VendorLogin = () => {
               <p className="text-gray-400 text-sm mb-1">Sent to <span className="text-amber-400 font-semibold">{email}</span></p>
               <p className="text-gray-500 text-xs mb-4">Valid for 10 minutes.</p>
 
-              {devOtp && (
-                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-0.5">🔧 Dev Mode OTP</p>
-                    <p className="text-white font-mono text-lg font-black tracking-[0.3em]">{devOtp}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">Auto-filled · Email domain not verified</p>
-                  </div>
-                </div>
-              )}
+              {/* Dev OTP removed for production */}
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">6-digit OTP</label>

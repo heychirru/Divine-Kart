@@ -25,7 +25,6 @@ import recommendationRouter from './routes/recommendationRoutes.js'
 import storeRouter from './routes/storeRoutes.js'
 import userRouter from './routes/userRoutes.js'
 
-// Validate required environment variables (skip strict checks during tests)
 if (process.env.NODE_ENV !== 'test') {
     if (!process.env.JWT_SECRET) {
         console.error('❌ JWT_SECRET environment variable is required');
@@ -40,7 +39,7 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express()
 
 // Security Middleware
-app.use(helmet()); // Set security HTTP headers
+app.use(helmet());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
@@ -60,19 +59,17 @@ const defaultAllowedOrigins = [
 ];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? [...new Set([
-        'http://localhost:5173', // always allow Vite dev server
-        'http://admin.localhost:5173', // always allow Vite admin dev server
-        'http://vendor.localhost:5173', // always allow Vite vendor dev server
+        'http://localhost:5173',
+        'http://admin.localhost:5173',
+        'http://vendor.localhost:5173',
         ...process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     ])]
     : defaultAllowedOrigins;
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        // Normalize origin to lowercase and remove trailing slash for comparison
         const normalizedOrigin = origin.trim().replace(/\/$/, '').toLowerCase();
         const isAllowed = allowedOrigins.some(allowed => {
             const normalizedAllowed = allowed.trim().replace(/\/$/, '').toLowerCase();
@@ -93,11 +90,9 @@ app.use(cors({
 
 app.use(cookieParser());
 
-// CSRF Protection (disabled for non-state-changing requests and specific routes)
-// Using cookie-based CSRF since we're using cookie-parser
+
 const csrfProtection = csrf({ cookie: true });
 
-// Conditionally apply CSRF protection to state-changing routes
 app.use((req, res, next) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
         return next();
@@ -106,8 +101,6 @@ app.use((req, res, next) => {
     if (req.path.startsWith('/webhooks/')) {
         return next();
     }
-    // Skip CSRF for API routes that use JWT authentication
-    // JWT tokens in headers are less vulnerable to CSRF attacks
     if (req.path.startsWith('/api/')) {
         return next();
     }
@@ -122,26 +115,30 @@ app.get('/csrf-token', csrfProtection, (req, res) => {
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 100,
     message: 'Too many requests from this IP, please try again later.'
 });
 
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 requests per 15 min for auth endpoints (OTP brute-force protection)
+    windowMs: 15 * 60 * 1000,
+    max: 20, 
+
     message: 'Too many authentication attempts, please try again later.'
 });
 
-app.use(limiter);
+const otpSendLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 5, 
+    message: 'Too many OTP requests. Please wait 15 minutes before trying again.'
+});
 
-// Only connect to DB when not under test
+app.use(limiter)
+
 if (process.env.NODE_ENV !== 'test') {
     connectDB();
 }
 
 // ROUTES
-
-//USER ROUTE
 app.use('/api/users', authLimiter, userRouter)
 app.use('/api/cart', authMiddleware, cartRouter);
 
@@ -179,7 +176,6 @@ app.get('/readyz', async (_req, res) => {
     }
 });
 
-//Server Console Message in Browser
 app.get('/', (req, res) => {
     res.send(`
       <html>

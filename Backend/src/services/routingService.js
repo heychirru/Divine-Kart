@@ -4,13 +4,11 @@ import Store from '../models/storeModel.js';
  * Find the nearest approved + active store to a given coordinate.
  * Uses MongoDB 2dsphere $near index for sub-100ms performance.
  *
- * @param {number} lat - Customer latitude
- * @param {number} lng - Customer longitude
+ * @param {number} lat
+ * @param {number} lng
  * @returns {Promise<{store: object|null, routingMethod: string}>}
  */
 export async function findNearestStoreByCoords(lat, lng) {
-    // Find the nearest approved store within its own declared serviceRadius
-    // We try up to 50km and let the serviceRadius filter via maxDistance
     const store = await Store.findOne({
         isApproved: true,
         isActive: true,
@@ -20,12 +18,11 @@ export async function findNearestStoreByCoords(lat, lng) {
                     type: 'Point',
                     coordinates: [parseFloat(lng), parseFloat(lat)]
                 },
-                $maxDistance: 50000 // 50km outer cap; actual radius enforced per-store below
+                $maxDistance: 50000
             }
         }
     }).lean();
 
-    // Verify the customer is actually within the store's declared service radius
     if (store) {
         const storeLng = store.location.coordinates[0];
         const storeLat = store.location.coordinates[1];

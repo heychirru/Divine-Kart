@@ -1,7 +1,6 @@
 import Cart from "../models/cartModel.js";
 import createError from 'http-errors';
 
-// GET FUNCTION
 export const getCart = async (req, res, next) => {
     try {
         const items = await Cart.find({ user: req.user._id }).populate({
@@ -20,7 +19,6 @@ export const getCart = async (req, res, next) => {
     }
 }
 
-// POST FUNCTION TO ADD PRODUCT TO CART
 export const addToCart = async (req, res, next) => {
     try {
         const { productId, itemId, quantity = 1 } = req.body;
@@ -34,7 +32,6 @@ export const addToCart = async (req, res, next) => {
             throw createError(400, 'Quantity must be a positive number');
         }
 
-        // Use findOneAndUpdate with upsert for idempotent operation
         const cartItem = await Cart.findOneAndUpdate(
             { user: req.user._id, product: pid },
             { $inc: { quantity: quantity } },
@@ -57,7 +54,6 @@ export const addToCart = async (req, res, next) => {
     }
 }
 
-//PUT FUNCTION TO UPDATE CART ITEM QUANTITY
 export const updateCartItem = async (req, res, next) => {
    try {
         const { quantity } = req.body;
@@ -86,7 +82,6 @@ export const updateCartItem = async (req, res, next) => {
    }
 }
 
-// DELETE FUNCTION TO REMOVE ITEM FROM CART
 export const deletecartItem = async (req, res, next) => {
     try {
         const cartItem = await Cart.findOne({ _id: req.params.id, user: req.user._id });
@@ -102,7 +97,6 @@ export const deletecartItem = async (req, res, next) => {
     }
 }
 
-// DELETE FUNCTION TO CLEAR THE CART
 export const clearCart = async (req, res, next) => {
     try {
         await Cart.deleteMany({ user: req.user._id });

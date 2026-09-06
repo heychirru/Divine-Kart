@@ -8,8 +8,6 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-
 const STORE_STATUS_BADGE = {
   active:    'bg-emerald-50 text-emerald-600 border-emerald-200',
   pending:   'bg-amber-50 text-amber-600 border-amber-200',
@@ -28,10 +26,9 @@ const getStoreStatus = (store) => {
   return 'active';
 };
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Dashboard
 
 const AdminDashboard = () => {
-  // Fetch all stores
   const { data: storesData, isLoading } = useQuery({
     queryKey: ['admin-stores-all'],
     queryFn: () => adminGetStores({ limit: 100 }),
@@ -40,18 +37,15 @@ const AdminDashboard = () => {
 
   const stores = storesData?.data ?? [];
 
-  // Calculate stats
   const totalStores  = stores.length;
   const activeStores = stores.filter(s => s.isApproved && s.isActive !== false).length;
   const pendingStores = stores.filter(s => !s.isApproved && s.isActive !== false).length;
   const offlineStores = stores.filter(s => s.isActive === false).length;
 
-  // Recent registrations — sorted newest first, limit 8
   const recentStores = [...stores]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 8);
 
-  // Pending stores requiring action
   const pendingList = stores
     .filter(s => !s.isApproved && s.isActive !== false)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -70,7 +64,6 @@ const AdminDashboard = () => {
   return (
     <div className="p-10 bg-gray-50/30 min-h-screen">
 
-      {/* ── Header ─────────────────────────────────────────── */}
       <div className="mb-10 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-[900] text-gray-900 tracking-tight uppercase italic">Dashboard</h1>

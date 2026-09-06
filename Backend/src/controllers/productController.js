@@ -1,7 +1,6 @@
 import { Product } from "../models/productModel.js";
 import uploadImageClodinary from "../utils/uploadImageClodinary.js";
 
-//GET SINGLE PRODUCT BY ID
 export const getProductById = async (req, res, next) => {
     try {
         const product = await Product.findById(req.params.id).lean();
@@ -14,7 +13,6 @@ export const getProductById = async (req, res, next) => {
     }
 }
 
-//GET FUNCTION TO GET ALL PRODUCTS
 export const getAllProducts = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -34,8 +32,6 @@ export const getAllProducts = async (req, res, next) => {
         // Single store filter
         if (req.query.store) query.store = req.query.store;
 
-        // Multiple store IDs — used by the hyperlocal Home feed:
-        // ?storeIds=id1,id2,id3  →  only products from those stores
         if (req.query.storeIds) {
             const ids = req.query.storeIds.split(',').map(s => s.trim()).filter(Boolean);
             if (ids.length > 0) query.store = { $in: ids };
@@ -71,7 +67,6 @@ export const getAllProducts = async (req, res, next) => {
     }
 }
 
-//CREATE FUNCTION TO CREATE A PRODUCT
 export const createProduct = async (req, res, next) => {
     try {
         const { name, description, OldPrice, price } = req.body;
@@ -79,7 +74,6 @@ export const createProduct = async (req, res, next) => {
 
         const categoryValue = req.body?.category ?? req.body?.Category ?? null;
 
-        // Prefer uploaded file -> ImageKit; fall back to direct imageUrl in body
         let imageUrl = req.body?.imageUrl ?? null;
 
         if (req.file) {
@@ -155,7 +149,6 @@ export const createProduct = async (req, res, next) => {
     }
 }
 
-//UPDATE FUNCTION TO UPDATE A PRODUCT
 export const updateProduct = async (req, res, next) => {
     try {
         const { name, description, category, OldPrice, price, imageUrl } = req.body;
@@ -175,7 +168,6 @@ export const updateProduct = async (req, res, next) => {
         const parsedOldPrice = OldPrice !== undefined ? Number(OldPrice) : undefined;
         const parsedPrice = price !== undefined ? Number(price) : undefined;
 
-        // Load existing product to validate price against stored/updated OldPrice
         const existingProduct = await Product.findById(req.params.id);
         if (!existingProduct) {
             return res.status(404).json({ success: false, message: 'Product not found' });

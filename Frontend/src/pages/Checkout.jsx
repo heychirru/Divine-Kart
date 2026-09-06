@@ -127,6 +127,17 @@ const Checkout = () => {
         description: 'Order Payment',
         prefill,
         notes,
+        // Enable all payment methods including UPI, cards, netbanking
+        config: {
+          display: {
+            blocks: {
+              utib: { name: 'Pay via UPI', instruments: [{ method: 'upi' }] },
+              other: { name: 'Other Payment Modes', instruments: [{ method: 'card' }, { method: 'netbanking' }] },
+            },
+            sequence: ['block.utib', 'block.other'],
+            preferences: { show_default_blocks: true },
+          },
+        },
         handler: async (response) => {
           try {
             await verifyPayment({
@@ -137,8 +148,9 @@ const Checkout = () => {
             clearCart();
             toast.success('Payment successful! Order confirmed.');
             navigate(ROUTES.ORDER_DETAIL.replace(':id', data.order._id));
-          } catch {
-            toast.error('Payment verification failed. Contact support.');
+          } catch (err) {
+            const msg = err?.response?.data?.message || 'Payment verification failed. Please contact support.';
+            toast.error(msg);
           }
         },
         modal: {

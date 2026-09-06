@@ -31,9 +31,10 @@ const otpSchema = z.object({
 const Login = () => {
   const navigate = useNavigate();
   const { login: setAuthState } = useAuth();
-  const [step, setStep] = useState(1); // 1 = identifier, 2 = otp
-  const [loginMethod, setLoginMethod] = useState('phone'); // 'email' | 'phone'
+  const [step, setStep] = useState(1);
+  const [loginMethod, setLoginMethod] = useState('phone');
   const [identifier, setIdentifier] = useState('');
+  
 
   // Step 1 forms
   const emailForm = useForm({ resolver: zodResolver(emailSchema) });
@@ -49,7 +50,7 @@ const Login = () => {
       }
       return sendLoginOtp({ phone: data.phone });
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       setIdentifier(loginMethod === 'email' ? variables.email : variables.phone);
       setStep(2);
       toast.success(
@@ -211,6 +212,9 @@ const Login = () => {
                   {identifier}
                 </span>
               </p>
+
+              {/* Dev OTP removed for production */}
+
               <input
                 id="otp"
                 type="text"

@@ -14,8 +14,9 @@ const VendorProfile = () => {
   const store = storeRes?.data;
 
   const [form, setForm] = useState({
-    name: '', description: '', phone: '', gstin: '',
+    name: '', description: '', phone: '', email: '', gstin: '',
     street: '', city: '', state: '', pincode: '', serviceRadius: 5,
+    lat: '', lng: '',
   });
   const [logoPreview, setLogoPreview] = useState(null);
 
@@ -23,10 +24,12 @@ const VendorProfile = () => {
     if (store) {
       setForm({
         name: store.name ?? '', description: store.description ?? '',
-        phone: store.phone ?? '', gstin: store.gstin ?? '',
+        phone: store.phone ?? '', email: store.email ?? '', gstin: store.gstin ?? '',
         street: store.address?.street ?? '', city: store.address?.city ?? '',
         state: store.address?.state ?? '', pincode: store.address?.pincode ?? '',
         serviceRadius: store.serviceRadius ?? 5,
+        lat: store.location?.coordinates?.[1] ?? '',
+        lng: store.location?.coordinates?.[0] ?? '',
       });
       setLogoPreview(store.logo ?? null);
     }
@@ -36,9 +39,12 @@ const VendorProfile = () => {
 
   const saveMutation = useMutation({
     mutationFn: () => updateMyStore({
-      name: form.name, description: form.description, phone: form.phone, gstin: form.gstin,
+      name: form.name, description: form.description, phone: form.phone,
+      email: form.email, gstin: form.gstin,
       address: { street: form.street, city: form.city, state: form.state, pincode: form.pincode },
       serviceRadius: Number(form.serviceRadius),
+      // Pass lat/lng if provided so backend updates location coordinates
+      ...(form.lat && form.lng ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) } : {}),
     }),
     onSuccess: (data) => { toast.success('Profile updated!'); setStore(data.data); qc.invalidateQueries({ queryKey: ['vendor-store'] }); },
     onError: (err) => toast.error(err.response?.data?.message || 'Update failed'),
@@ -98,13 +104,14 @@ const VendorProfile = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div><label className={labelCls}>Store Name</label><input value={form.name} onChange={update('name')} className={fieldCls} /></div>
             <div><label className={labelCls}>Phone</label><input value={form.phone} onChange={update('phone')} className={fieldCls} /></div>
-            <div className="md:col-span-2"><label className={labelCls}>Description</label><textarea value={form.description} onChange={update('description')} rows={3} className={`${fieldCls} resize-none`} /></div>
+            <div><label className={labelCls}>Contact Email</label><input type="email" value={form.email} onChange={update('email')} className={fieldCls} /></div>
             <div><label className={labelCls}>GSTIN</label><input value={form.gstin} onChange={update('gstin')} className={fieldCls} /></div>
+            <div className="md:col-span-2"><label className={labelCls}>Description</label><textarea value={form.description} onChange={update('description')} rows={3} className={`${fieldCls} resize-none`} /></div>
             <div><label className={labelCls}>Service Radius (km)</label><input type="number" min={1} value={form.serviceRadius} onChange={update('serviceRadius')} className={fieldCls} /></div>
           </div>
         </div>
         <div>
-          <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-4">Address</h3>
+          <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-4">Store Address</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="md:col-span-2"><label className={labelCls}>Street</label><input value={form.street} onChange={update('street')} className={fieldCls} /></div>
             <div><label className={labelCls}>City</label><input value={form.city} onChange={update('city')} className={fieldCls} /></div>
@@ -112,21 +119,28 @@ const VendorProfile = () => {
             <div><label className={labelCls}>Pincode</label><input value={form.pincode} onChange={update('pincode')} className={fieldCls} /></div>
           </div>
         </div>
-        {store?.location?.coordinates && (
-          <div>
-            <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-3">Store Location</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Latitude</p>
-                <p className="text-sm font-bold text-gray-700 mt-1">{store.location.coordinates[1]}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Longitude</p>
-                <p className="text-sm font-bold text-gray-700 mt-1">{store.location.coordinates[0]}</p>
-              </div>
+        <div>
+          <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-1">Store Location Coordinates</h3>
+          <p className="text-xs text-gray-400 mb-4">
+            Update coordinates to improve hyperlocal order routing accuracy.{' '}
+            <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="text-amber-500 underline">Find your coordinates →</a>
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Latitude</label>
+              <input type="number" step="any" value={form.lat} onChange={update('lat')} placeholder="e.g. 22.5726" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Longitude</label>
+              <input type="number" step="any" value={form.lng} onChange={update('lng')} placeholder="e.g. 88.3639" className={fieldCls} />
             </div>
           </div>
-        )}
+          {store?.location?.coordinates && store.location.coordinates[0] !== 0 && (
+            <p className="text-xs text-gray-400 mt-2">
+              Current: {store.location.coordinates[1]}, {store.location.coordinates[0]}
+            </p>
+          )}
+        </div>
         <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
           className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl text-sm uppercase tracking-widest transition disabled:opacity-50 flex items-center justify-center gap-2">
           {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -138,3 +152,4 @@ const VendorProfile = () => {
 };
 
 export default VendorProfile;
+

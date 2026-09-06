@@ -198,6 +198,13 @@ export const validateCreateOrder = [
  * Address Validation
  */
 export const validateAddress = [
+    body('name')
+        .trim()
+        .notEmpty().withMessage('Full name is required')
+        .isLength({ min: 2, max: 100 }).withMessage('Name must be between 2 and 100 characters'),
+    body('type')
+        .optional()
+        .isIn(['Home', 'Office', 'Other']).withMessage('Address type must be Home, Office, or Other'),
     body('addressLine')
         .trim()
         .notEmpty().withMessage('Address line is required')

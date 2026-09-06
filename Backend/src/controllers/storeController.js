@@ -101,11 +101,9 @@ export async function registerStore(req, res) {
     }
 }
 
-// VENDOR AUTH — OTP Login (delegates to existing user OTP system)
+// VENDOR AUTH — OTP Login 
 
 
-
- //  Send OTP to the vendor's registered email.
 
 export async function sendVendorLoginOtp(req, res) {
     const email = req.body?.email?.trim().toLowerCase();
@@ -145,9 +143,6 @@ export async function sendVendorLoginOtp(req, res) {
     }
 }
 
-
- //  POST /api/stores/login/verify-otp
- 
 export async function verifyVendorLoginOtp(req, res) {
     const email = req.body?.email?.trim().toLowerCase();
     const otp = req.body?.otp?.toString().trim();
@@ -226,7 +221,7 @@ export async function getMyStore(req, res) {
  * Allows updating: description, phone, address, location, serviceRadius, pincodes, openingHours
  */
 export async function updateMyStore(req, res) {
-    const ALLOWED_FIELDS = ['name', 'description', 'phone', 'gstin', 'address', 'serviceRadius', 'pincodes', 'openingHours'];
+    const ALLOWED_FIELDS = ['name', 'description', 'phone', 'email', 'gstin', 'address', 'serviceRadius', 'pincodes', 'openingHours'];
 
     try {
         const store = await Store.findOne({ owner: req.userId });
@@ -307,9 +302,6 @@ export async function toggleStoreStatus(req, res) {
         return res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
-
-
- // Upload store logo using ImageKit
 
 export async function updateStoreLogo(req, res) {
     try {
@@ -528,7 +520,6 @@ export async function getStoreProducts(req, res) {
     }
 }
 
- // Orders routed to the authenticated vendor's store.
 export async function getStoreOrders(req, res) {
     const { storeId } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -566,9 +557,6 @@ export async function getStoreOrders(req, res) {
         return res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
-
-
- // Single order detail for the vendor's store.
 
 export async function getStoreOrderById(req, res) {
     const { storeId, orderId } = req.params;

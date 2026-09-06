@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Create Axios instance
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
     headers: {
@@ -54,15 +53,12 @@ api.interceptors.response.use(
                         { refreshToken }
                     );
 
-                    // Save new token
                     localStorage.setItem('token', data.token);
 
-                    // Retry original request
                     originalRequest.headers.Authorization = `Bearer ${data.token}`;
                     return api(originalRequest);
                 }
             } catch (refreshError) {
-                // Refresh failed, redirect to login
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
                 window.location.href = '/login';
